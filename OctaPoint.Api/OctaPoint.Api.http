@@ -1,0 +1,6 @@
+@OctaPoint.Api_HostAddress = http://localhost:5074
+
+GET {{OctaPoint.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
