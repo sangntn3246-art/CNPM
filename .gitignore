@@ -1,32 +1,9 @@
-# .NET build output
-**/bin/
-**/obj/
-*.user
-*.suo
-
-# Node.js and Next.js
-**/node_modules/
-**/.next/
-**/out/
-**/coverage/
-**/*.tsbuildinfo
-
-# Local configuration and secrets
+node_modules/
+dist/
+.next/
 .env
-.env.*
-!.env.example
-**/appsettings.Local.json
-
-# IDE and operating-system files
-.vs/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/tasks.json
-!.vscode/launch.json
-.idea/
-.DS_Store
-Thumbs.db
-
-# Logs and certificates
+.audit-store/
 *.log
-*.pem
+.DS_Store
+.turbo/
+build/

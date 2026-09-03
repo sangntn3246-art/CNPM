@@ -1,55 +1,63 @@
 # OctaPoint
 
-Nền tảng Credit-as-a-Service OctaPoint gồm backend C# ASP.NET Core Web API và merchant web portal Next.js.
+**Blockchain-Backed Credit-as-a-Service (CaaS) Platform** — Sui Move smart contracts,
+a TypeScript API Gateway, a Developer SDK, an AI-ready MCP Server, and two admin/merchant
+web portals.
 
-## Yêu cầu
+This repository is a runnable **reference implementation / capstone deliverable**. It
+implements the full request→gateway→ledger→(optional on-chain settlement) flow for real,
+with an in-memory/SQLite "off-chain fast path" that mirrors what the Sui Move contract does
+on-chain, so you can demo the whole product end-to-end on a laptop with `docker compose up`
+and no cloud accounts.
 
-- .NET SDK 10.0+
-- Node.js 22+
-- npm 10+
-
-## Khởi động backend
-
-```powershell
-dotnet restore OctaPoint.slnx
-dotnet run --project OctaPoint.Api
+```
+octapoint/
+├── contracts/octapoint/        Sui Move smart contract (Object-Centric credit model)
+├── packages/
+│   ├── api-gateway/            Hono + TypeScript core API (Postgres + Redis, HMAC, RBAC)
+│   ├── sdk-ts/                 @octapoint/sdk — TypeScript client SDK
+│   └── mcp-server/             OctaPoint MCP Server — exposes tools to AI agents
+├── apps/
+│   ├── merchant-portal/        Next.js — merchant self-service console
+│   └── admin-portal/           Next.js — platform operator console
+├── scripts/seed.ts             Seed demo merchant + users + a first credit issuance
+└── docker-compose.yml          Postgres, Redis, API Gateway, MCP Server, both portals
 ```
 
-API mặc định chạy tại `https://localhost:7229` và `http://localhost:5074`.
+## Quick start
 
-Health check: `GET http://localhost:5074/health`
-
-## Khởi động frontend
-
-```powershell
-Set-Location octapoint-web
-npm.cmd ci
-npm.cmd run dev
+```bash
+cp .env.example .env
+docker compose up --build
 ```
 
-Frontend mặc định chạy tại `http://localhost:3000`.
+- API Gateway:      http://localhost:4000
+- MCP Server (HTTP/SSE transport for testing): http://localhost:4100
+- Merchant Portal:  http://localhost:3000
+- Admin Portal:     http://localhost:3001
 
-## Kiểm tra trước khi push
+Or run pieces individually during development:
 
-```powershell
-dotnet build OctaPoint.slnx
-Set-Location octapoint-web
-npm.cmd run lint
-npm.cmd run build
+```bash
+cd packages/api-gateway && npm install && npm run dev
+cd packages/sdk-ts       && npm install && npm run build
+cd packages/mcp-server   && npm install && npm run dev
+cd apps/merchant-portal  && npm install && npm run dev
 ```
 
-## Cấu trúc repository
+## What's real vs. simplified in this reference build
 
-```text
-OctaPoint.Api/                    Backend ASP.NET Core
-  Controllers/                    HTTP boundary controllers
-  Application/Controls/            Các lớp điều khiển use case
-  Application/Contracts/           Request context và response contract
-  Domain/                          Quy tắc credit, tenant, campaign, audit
-  Infrastructure/                 Adapter blockchain và persistence
-octapoint-web/                    Frontend Next.js
-Backend-Control-Classes.md        Thiết kế backend control classes
-.github/workflows/ci.yml          Pipeline kiểm tra tự động
-```
+| Component | Status |
+|---|---|
+| Move smart contract (object model, capabilities, issue/redeem/transfer) | Full source, compiles with `sui move build` given the Sui CLI |
+| API Gateway (Hono, Postgres/Prisma, Redis rate limiter, HMAC-SHA256 auth, RBAC, webhook dispatch) | Fully functional, runs locally |
+| Anti-fraud engine (signature check, sliding-window rate limit, anomaly flags) | Functional, rule-based (production would add ML scoring) |
+| On-chain settlement via `@mysten/sui` | Wired up behind `CHAIN_MODE=onchain`; defaults to `CHAIN_MODE=offchain` (fast-path ledger only) so the whole demo runs with zero blockchain setup. Flip the env var once you have a funded Sui Testnet address + Enoki API key. |
+| Enoki zkLogin / sponsored transactions | Client wired up (`packages/api-gateway/src/services/enokiService.ts`) behind the same `onchain` flag — needs your own Enoki API key to actually sponsor gas |
+| Walrus audit storage | Adapter with a local-disk fallback (`WALRUS_MODE=local`) and a real Walrus HTTP client (`WALRUS_MODE=walrus`) |
+| Developer SDK (TypeScript) | Fully functional client against the gateway |
+| MCP Server | Fully functional — 6 real tools, tested against the local gateway |
+| Merchant + Admin portals | Functional Next.js apps (App Router) covering the core flows: onboarding, API keys, rule engine, transaction history, tenant/RBAC admin, infra monitoring |
+| ClickHouse analytics, Stripe billing | Stubbed service classes with the correct interface + TODOs — swap in real API keys to activate; not required for the demo to run |
 
-Các control hiện là skeleton có thể biên dịch. Những phần tích hợp PostgreSQL, Redis, Sui, Walrus, Stripe, RBAC và HMAC sẽ được triển khai trong các task tiếp theo.
+See each package's own README for details.

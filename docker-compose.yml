@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: octapoint
+      POSTGRES_PASSWORD: octapoint
+      POSTGRES_DB: octapoint
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U octapoint"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-gateway:
+    build: ./packages/api-gateway
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://octapoint:octapoint@postgres:5432/octapoint
+      REDIS_URL: redis://redis:6379
+    ports: ["4000:4000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: sh -c "npx prisma db push --skip-generate && npm run dev"
+    volumes:
+      - ./packages/api-gateway/src:/app/src
+
+  mcp-server:
+    build: ./packages/mcp-server
+    env_file: .env
+    environment:
+      OCTAPOINT_BASE_URL: http://api-gateway:4000
+    ports: ["4100:4100"]
+    depends_on: [api-gateway]
+
+  merchant-portal:
+    build: ./apps/merchant-portal
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: http://localhost:4000
+    ports: ["3000:3000"]
+    depends_on: [api-gateway]
+
+  admin-portal:
+    build: ./apps/admin-portal
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: http://localhost:4000
+    ports: ["3001:3001"]
+    depends_on: [api-gateway]
+
+volumes:
+  pgdata:
