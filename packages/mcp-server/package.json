@@ -1,0 +1,21 @@
+{
+  "name": "@octapoint/mcp-server",
+  "version": "0.1.0",
+  "description": "OctaPoint MCP Server — exposes credit/loyalty tools to LLM agents",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start:http": "tsx src/httpServer.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@octapoint/sdk": "file:../sdk-ts",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5"
+  }
+}

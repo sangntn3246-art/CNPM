@@ -1,0 +1,16 @@
+{
+  "name": "@octapoint/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript SDK for the OctaPoint Credit-as-a-Service API",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5"
+  }
+}
