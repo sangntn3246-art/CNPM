@@ -1,0 +1,28 @@
+{
+  "name": "octapoint",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev -w @octapoint/api-gateway",
+    "dev:mcp": "npm run dev -w @octapoint/mcp-server",
+    "dev:merchant": "npm run dev -w @octapoint/merchant-portal",
+    "dev:admin": "npm run dev -w @octapoint/admin-portal",
+    "build:sdk": "npm run build -w @octapoint/sdk",
+    "build:gateway": "npm run build -w @octapoint/api-gateway",
+    "build:mcp": "npm run build -w @octapoint/mcp-server",
+    "build:merchant": "npm run build -w @octapoint/merchant-portal",
+    "build:admin": "npm run build -w @octapoint/admin-portal",
+    "build:all": "npm run build:sdk && npm run build:gateway && npm run build:mcp && npm run build:merchant && npm run build:admin",
+    "seed": "tsx scripts/seed.ts",
+    "bootstrap:demo": "node scripts/bootstrap-demo.mjs",
+    "check:static": "node scripts/static-check.mjs"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

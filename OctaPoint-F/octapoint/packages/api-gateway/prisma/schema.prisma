@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  MERCHANT_OWNER
+  MERCHANT_STAFF
+}
+
+enum TxType {
+  ISSUE
+  REDEEM
+  TRANSFER
+  EXPIRE
+}
+
+model Merchant {
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  status        MerchantStatus @default(PENDING)
+  earnRateBps   Int            @default(100)   // credits earned per 1 unit spent, in bps
+  redeemRateBps Int            @default(100)   // value of 1 credit on redeem, in bps
+  treasuryObjectId String?     // Sui Treasury object id once onboarded on-chain
+  merchantCapObjectId String?  // Sui MerchantCap held by the configured gateway signer for settlement
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  apiKeys      ApiKey[]
+  users        MerchantUser[]
+  accounts     LoyaltyAccount[]
+  transactions Transaction[]
+  campaigns    Campaign[]
+  webhooks     Webhook[]
+}
+
+model MerchantUser {
+  id         String   @id @default(uuid())
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchantId String
+  email      String
+  role       Role     @default(MERCHANT_STAFF)
+  createdAt  DateTime @default(now())
+
+  @@unique([merchantId, email])
+}
+
+/// API key/secret pair used to HMAC-sign every gateway request (see
+/// src/middleware/hmac.ts). The secret is encrypted at rest; the plaintext is
+/// only ever shown once, at creation time.
+model ApiKey {
+  id           String   @id @default(uuid())
+  merchant     Merchant @relation(fields: [merchantId], references: [id])
+  merchantId   String
+  keyId        String   @unique // public identifier, e.g. "op_live_..."
+  secretCiphertext String        // AES-256-GCM encrypted API secret; plaintext is never stored
+  label        String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+}
+
+/// One row per (merchant, end user). Off-chain fast-path mirror of the
+/// on-chain LoyaltyAccount Move object.
+model LoyaltyAccount {
+  id               String   @id @default(uuid())
+  merchant         Merchant @relation(fields: [merchantId], references: [id])
+  merchantId       String
+  externalUserId   String   // the merchant's own user identifier
+  balance          BigInt   @default(0)
+  lifetimeEarned   BigInt   @default(0)
+  lifetimeRedeemed BigInt   @default(0)
+  suiObjectId      String?  // on-chain LoyaltyAccount object id, once opened
+  suiOwnerAddress  String?  // zkLogin-derived address, once opened
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@unique([merchantId, externalUserId])
+}
+
+model Transaction {
+  id           String         @id @default(uuid())
+  merchant     Merchant       @relation(fields: [merchantId], references: [id])
+  merchantId   String
+  account      LoyaltyAccount @relation(fields: [accountId], references: [id])
+  accountId    String
+  type         TxType
+  amount       BigInt
+  balanceAfter BigInt
+  reason       String?
+  requestId    String         @unique // idempotency key, also used for audit trail
+  suiTxDigest  String?        // on-chain settlement digest, once settled
+  auditBlobId  String?        // Walrus blob id for the encrypted audit record
+  createdAt    DateTime       @default(now())
+
+  @@index([merchantId, createdAt])
+}
+
+model Campaign {
+  id           String   @id @default(uuid())
+  merchant     Merchant @relation(fields: [merchantId], references: [id])
+  merchantId   String
+  name         String
+  multiplierBps Int     @default(10000) // 10000 = 1.0x
+  startsAt     DateTime
+  endsAt       DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model Webhook {
+  id         String   @id @default(uuid())
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchantId String
+  url        String
+  secret     String   // AES-256-GCM encrypted webhook signing secret
+  events     String[] // e.g. ["credit.issued", "credit.redeemed"]
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
